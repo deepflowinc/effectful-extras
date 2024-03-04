@@ -1,0 +1,15 @@
+{
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "cmd": "bash -c \"find . -name 'package.yaml' -not -path './dist-newstyle/*' | while read -r FILE; do hpack \"\\${FILE}\"; done\"",
+        "isAsync": true,
+        "match": "(package\\.yaml|\\.l?hs)$"
+      }
+    ]
+  },
+  "files.associations": {
+    "**/ci/configs/*.project": "cabal"
+  },
+  "haskell.formattingProvider": "fourmolu"
+}
