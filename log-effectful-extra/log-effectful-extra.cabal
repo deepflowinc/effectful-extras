@@ -1,0 +1,51 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           log-effectful-extra
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/deepflowinc/log-effectful-extra#readme>
+homepage:       https://github.com/deepflowinc/effectful-extras#readme
+bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
+author:         DeepFlow, Inc.
+maintainer:     DeepFlow, Inc.
+copyright:      (c) 2024 DeepFlow, Inc.
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/deepflowinc/effectful-extras
+  subdir: log-effectful-extra
+
+library
+  exposed-modules:
+      Effectful.Log.Extra
+  other-modules:
+      Paths_log_effectful_extra
+  autogen-modules:
+      Paths_log_effectful_extra
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-packages
+  build-depends:
+      aeson
+    , aeson-pretty
+    , base >=4.7 && <5
+    , bytestring
+    , effectful-core
+    , log-base
+    , log-effectful
+    , path-tagged
+    , safe-exceptions
+    , semigroupoids
+    , text
+    , text-builder-linear
+    , time
+  default-language: Haskell2010
