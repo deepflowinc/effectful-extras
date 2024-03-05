@@ -7,7 +7,7 @@
 -- remote-repo: stackage-lts-20.26:http://www.stackage.org/lts-20.26
 import: ../../cabal.project
 with-compiler: ghc-9.2.8
-index-state: hackage.haskell.org 2024-02-05T22:44:18Z
+index-state: hackage.haskell.org 2024-03-05T05:41:26Z
 constraints: abstract-deque ==0.3,
              abstract-deque-tests ==0.3,
              abstract-par ==0.3.3,

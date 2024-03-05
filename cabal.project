@@ -4,14 +4,9 @@ benchmarks: True
 
 source-repository-package
   type: git
-  location: git@github.com:deepflowinc/streaming-extras.git
+  location: https://github.com/deepflowinc/streaming-extras.git
   tag: d5c98a235a4a32901cb4a4634df60156256548d0
   subdir:
     streaming-http
     streaming-s3
     streaming-SHA
-
-source-repository-package
-  type: git
-  location: git@github.com:konn/path-tagged.git
-  tag: 64306c8775d6a7e4f96286b198ef0cc38bc2be8d
