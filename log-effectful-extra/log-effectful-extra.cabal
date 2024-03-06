@@ -4,19 +4,19 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 
-name:           log-effectful-extra
-version:        0.1.0.0
-synopsis:       Missing functions for log-effectful package
-description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/blob/master/log-effectful-extra#readme>
-category:       System
-homepage:       https://github.com/deepflowinc/effectful-extras#readme
-bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
-author:         DeepFlow, Inc.
-maintainer:     DeepFlow, Inc.
-copyright:      (c) 2024 DeepFlow, Inc.
-license:        BSD-3-Clause
-license-file:   LICENSE
-build-type:     Simple
+name:               log-effectful-extra
+version:            0.1.0.0
+synopsis:           Missing functions for log-effectful package
+description:        Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/tree/master/log-effectful-extra#readme>
+category:           System
+homepage:           https://github.com/deepflowinc/effectful-extras#readme
+bug-reports:        https://github.com/deepflowinc/effectful-extras/issues
+author:             DeepFlow, Inc.
+maintainer:         DeepFlow, Inc.
+copyright:          (c) 2024 DeepFlow, Inc.
+license:            BSD-3-Clause
+license-file:       LICENSE
+build-type:         Simple
 extra-source-files:
     README.md
     CHANGELOG.md

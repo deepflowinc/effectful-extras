@@ -4,19 +4,19 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 
-name:           path-tagged-effectful
-version:        0.1.0.0
-synopsis:       Binding for path-tagged package to effectful.
-description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/blob/master/path-tagged-effectful#readme>
-category:       System, Filesystem, Control
-homepage:       https://github.com/deepflowinc/effectful-extras#readme
-bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
-author:         DeepFlow, Inc.
-maintainer:     DeepFlow, Inc.
-copyright:      2024 (c) DeepFlow, Inc.
-license:        BSD-3-Clause
-license-file:   LICENSE
-build-type:     Simple
+name:               path-tagged-effectful
+version:            0.1.0.0
+synopsis:           Binding for path-tagged package to effectful.
+description:        Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/tree/master/path-tagged-effectful#readme>
+category:           System, Filesystem, Control
+homepage:           https://github.com/deepflowinc/effectful-extras#readme
+bug-reports:        https://github.com/deepflowinc/effectful-extras/issues
+author:             DeepFlow, Inc.
+maintainer:         DeepFlow, Inc.
+copyright:          2024 (c) DeepFlow, Inc.
+license:            BSD-3-Clause
+license-file:       LICENSE
+build-type:         Simple
 extra-source-files:
     README.md
     CHANGELOG.md
