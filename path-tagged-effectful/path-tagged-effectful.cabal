@@ -6,7 +6,9 @@ cabal-version: 1.12
 
 name:           path-tagged-effectful
 version:        0.1.0.0
+synopsis:       Binding for path-tagged package to effectful.
 description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/blob/master/path-tagged-effectful#readme>
+category:       System, Filesystem, Control
 homepage:       https://github.com/deepflowinc/effectful-extras#readme
 bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
 author:         DeepFlow, Inc.

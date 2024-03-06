@@ -6,7 +6,9 @@ cabal-version: 1.12
 
 name:           lukko-effectful
 version:        0.1.0.0
+synopsis:       A port of lukko to effectful.
 description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/blob/master/lukko-effectful#readme>
+category:       System, Concurrency, Control
 homepage:       https://github.com/deepflowinc/effectful-extras#readme
 bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
 author:         DeepFlow, Inc.
