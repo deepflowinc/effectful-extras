@@ -6,7 +6,9 @@ cabal-version: 1.12
 
 name:           effectful-lens
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-lens#readme>
+synopsis:       Interop between lens and effectful.
+description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/blob/master/effectful-lens#readme>
+category:       Control, Data, Lenses, Generics
 homepage:       https://github.com/deepflowinc/effectful-extras#readme
 bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
 author:         DeepFlow, Inc.

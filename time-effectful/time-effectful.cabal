@@ -6,7 +6,7 @@ cabal-version: 1.12
 
 name:           time-effectful
 version:        0.1.0.0
-description:    Please see the README on GitHub at <https://github.com/deepflowinc/time-effectful#readme>
+description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/blob/master/time-effectful#readme>
 homepage:       https://github.com/deepflowinc/effectful-extras#readme
 bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
 author:         DeepFlow, Inc.
