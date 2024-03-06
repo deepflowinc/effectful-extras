@@ -7,6 +7,7 @@
 
 module Effectful.Database.Beam.Sqlite (
   Sqlite,
+  SqliteTransaction,
   liftSqliteM,
   runSqlite,
   runSqliteDebug,
@@ -21,10 +22,12 @@ module Effectful.Database.Beam.Sqlite (
   module Query,
   selectMany,
   selectOne,
+  withSqlPool,
+  SqlitePool (),
 ) where
 
 import Control.Concurrent (getNumCapabilities)
-import Control.Exception.Safe (MonadMask (..), bracket, catch, onException, throwM)
+import Control.Exception.Safe
 import Control.Monad (when)
 import Data.Function (fix, (&))
 import Data.Functor.Identity (Identity)
@@ -42,14 +45,17 @@ import Effectful.Concurrent (Concurrent, threadDelay)
 import Effectful.Dispatch.Static
 import Effectful.Log
 import Effectful.Random.Static (Random, uniformR)
+import GHC.Generics (Generic)
 import Path
 import Text.Printf (printf)
 
 data Sqlite :: Effect
 
+newtype SqlitePool = SqlitePool {getPool :: Pool Connection}
+
 type instance DispatchOf Sqlite = 'Static 'WithSideEffects
 
-data instance StaticRep Sqlite = Sqlite (String -> IO ()) (Pool Connection)
+data instance StaticRep Sqlite = Sqlite (String -> IO ()) SqlitePool
 
 data SqliteTransaction :: Effect
 
@@ -57,7 +63,10 @@ type instance DispatchOf SqliteTransaction = 'Static 'NoSideEffects
 
 data instance StaticRep SqliteTransaction = SqliteT (String -> IO ()) Connection
 
-newtype SqliteDb = DbFile (Path Abs File)
+data SqliteDb
+  = DbFile (Path Abs File)
+  | DbPool SqlitePool
+  deriving (Generic)
 
 liftSqliteM :: (SqliteTransaction :> es) => Sqlite.SqliteM a -> Eff es a
 liftSqliteM act = do
@@ -74,7 +83,7 @@ selectOne ::
   (SqliteTransaction :> es, Beam.FromBackendRow Sqlite.Sqlite a) =>
   Beam.SqlSelect Sqlite.Sqlite a ->
   Eff es (Maybe a)
-selectOne = liftSqliteM . Beam.runSelectReturningOne
+selectOne = liftSqliteM . Beam.runSelectReturningFirst
 
 insertMany ::
   ( SqliteTransaction :> es
@@ -135,7 +144,7 @@ notransact ::
   Eff (SqliteTransaction ': es) a ->
   Eff es a
 notransact act = do
-  Sqlite logg mconn <- getStaticRep
+  Sqlite logg (SqlitePool mconn) <- getStaticRep
   withResourceEff mconn $ \conn ->
     evalStaticRep (SqliteT logg conn) $ retryBusy act
 
@@ -144,7 +153,7 @@ transact ::
   Eff (SqliteTransaction ': es) a ->
   Eff es a
 transact act = do
-  Sqlite logg mconn <- getStaticRep
+  Sqlite logg (SqlitePool mconn) <- getStaticRep
   withResourceEff mconn $ \conn ->
     unsafeLiftMapIO (Sqlite.withTransaction conn) $
       evalStaticRep (SqliteT logg conn) $
@@ -155,7 +164,7 @@ transactImmediate ::
   Eff (SqliteTransaction ': es) a ->
   Eff es a
 transactImmediate act = do
-  Sqlite logg mconn <- getStaticRep
+  Sqlite logg (SqlitePool mconn) <- getStaticRep
   withResourceEff mconn $ \conn ->
     unsafeLiftMapIO (Sqlite.withImmediateTransaction conn) $
       evalStaticRep (SqliteT logg conn) $
@@ -166,35 +175,38 @@ transactExclusive ::
   Eff (SqliteTransaction ': es) a ->
   Eff es a
 transactExclusive act = do
-  Sqlite logg mconn <- getStaticRep
+  Sqlite logg (SqlitePool mconn) <- getStaticRep
   withResourceEff mconn $ \conn ->
     unsafeLiftMapIO (Sqlite.withExclusiveTransaction conn) $
       evalStaticRep (SqliteT logg conn) $
         retryBusy act
 
-withSqlPool :: SqliteDb -> (Pool Connection -> Eff es a) -> Eff es a
-withSqlPool (DbFile db) =
+withSqlPool :: (IOE :> es) => Path Abs File -> (SqlitePool -> Eff es a) -> Eff es a
+withSqlPool db =
   bracket
-    ( unsafeEff_ $ do
+    ( liftIO $ do
         num <- getNumCapabilities
-        newPool $
-          defaultPoolConfig
-            ( do
-                conn <- Sqlite.open (toFilePath db)
-                Sqlite.execute_ conn "PRAGMA busy_timeout=3000;"
-                pure conn
-            )
-            Sqlite.close
-            0.5
-            num
+        fmap SqlitePool $
+          newPool $
+            defaultPoolConfig
+              ( do
+                  conn <- Sqlite.open (toFilePath db)
+                  Sqlite.execute_ conn "PRAGMA busy_timeout=3000;"
+                  pure conn
+              )
+              Sqlite.close
+              0.5
+              num
     )
-    (unsafeEff_ . destroyAllResources)
+    (liftIO . destroyAllResources . getPool)
 
 runSqlite :: (IOE :> es) => SqliteDb -> Eff (Sqlite ': es) a -> Eff es a
 {-# INLINE runSqlite #-}
-runSqlite sql act =
-  withSqlPool sql $ \pool ->
+runSqlite (DbFile dbPath) act =
+  withSqlPool dbPath $ \pool ->
     evalStaticRep (Sqlite (const $ pure ()) pool) act
+runSqlite (DbPool pool) act =
+  evalStaticRep (Sqlite (const $ pure ()) pool) act
 
 runSqliteDebug ::
   (IOE :> es, Log :> es) =>
@@ -202,7 +214,11 @@ runSqliteDebug ::
   Eff (Sqlite ': es) a ->
   Eff es a
 {-# INLINE runSqliteDebug #-}
-runSqliteDebug sql act = withSqlPool sql $ \pool -> do
+runSqliteDebug (DbFile sql) act = withSqlPool sql $ \pool -> do
+  withRunInIO $ \runInIO ->
+    runInIO $
+      evalStaticRep (Sqlite (runInIO . localDomain "sql" . logTrace_ . T.pack) pool) act
+runSqliteDebug (DbPool pool) act = do
   withRunInIO $ \runInIO ->
     runInIO $
       evalStaticRep (Sqlite (runInIO . localDomain "sql" . logTrace_ . T.pack) pool) act
