@@ -1,7 +1,7 @@
 name:                path-tagged-effectful
 version:             0.1.0.0
 github:              "deepflowinc/effectful-extras/path-tagged-effectful"
-license:             BSD3
+license:             BSD-3-Clause
 author:              "DeepFlow, Inc."
 maintainer:          "DeepFlow, Inc."
 copyright:           "2024 (c) DeepFlow, Inc."

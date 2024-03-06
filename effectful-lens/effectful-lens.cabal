@@ -1,4 +1,4 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
 -- This file has been generated from package.yaml by hpack version 0.35.2.
 --
@@ -14,7 +14,7 @@ bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
 author:         DeepFlow, Inc.
 maintainer:     DeepFlow, Inc.
 copyright:      2024 (c) DeepFlow, Inc.
-license:        BSD3
+license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
@@ -31,6 +31,8 @@ library
       Effectful.Reader.Static.Lens
       Effectful.State.Static.Shared.Lens
   other-modules:
+      Paths_effectful_lens
+  autogen-modules:
       Paths_effectful_lens
   hs-source-dirs:
       src
