@@ -1,0 +1,66 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           typed-process-effectful-extra
+version:        0.1.0.0
+synopsis:       Interop between log-effectful and type-process-effectful
+description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/tree/master/typed-process-effectful-extra#readme>
+category:       System, Control, Logging
+homepage:       https://github.com/deepflowinc/effectful-extras#readme
+bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
+author:         DeepFlow, Inc.
+maintainer:     DeepFlow, Inc.
+copyright:      2024 (c) DeepFlow, Inc.
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+tested-with:
+    GHC == 9.2.8
+  , GHC == 9.4.8
+  , GHC == 9.6.4
+  , GHC == 9.8.2
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/deepflowinc/effectful-extras
+  subdir: typed-process-effectful-extra
+
+library
+  exposed-modules:
+      Effectful.Process.Typed.Log
+  other-modules:
+      Paths_typed_process_effectful_extra
+  autogen-modules:
+      Paths_typed_process_effectful_extra
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-packages
+  build-depends:
+      base >=4.7 && <5
+    , effectful-core
+    , log-effectful-extra
+    , text
+    , typed-process-effectful
+    , unliftio
+  default-language: Haskell2010
+
+test-suite typed-process-effectful-extra-test
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  other-modules:
+      Paths_typed_process_effectful_extra
+  autogen-modules:
+      Paths_typed_process_effectful_extra
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-packages -threaded -O2 -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , typed-process-effectful-extra
+  default-language: Haskell2010
