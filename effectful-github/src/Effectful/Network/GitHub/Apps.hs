@@ -19,6 +19,7 @@ module Effectful.Network.GitHub.Apps (
   -- * API Calls
   GitHub,
   GitHubConfig (..),
+  AppID (..),
   CommitHash (..),
   runGitHubWith,
   runGitHubWith_,
@@ -638,7 +639,7 @@ newTimedAppToken ::
 newTimedAppToken cfg = do
   newTimedResource $ do
     now <- getCurrentTime
-    tok <- liftIO $ getJWTToken cfg.github.privKey cfg.github.appID
+    tok <- liftIO $ getJWTToken cfg.github.privKey cfg.github.appID.getAppID
     pure (GitHubAppToken tok, 600 `addUTCTime` now)
 
 data Installation = Installation {id, target_id :: !Int, account :: !InstallationAccount}
@@ -668,7 +669,7 @@ newTimedRepoTokens cfg = do
     -- NOTE: getJWTToken は 10 分間のみ有効な App トークンを生成する。
     -- このため、レポジトリ用のトークンを生成する直前に、個別に App トークンを生成する必要があり、
     -- この @appToken@ の生成を 'newTimedResource' の外側に移動してはならない (MUST NOT)。
-    appTok <- getJWTToken cfg.github.privKey cfg.github.appID
+    appTok <- getJWTToken cfg.github.privKey cfg.github.appID.getAppID
     let sett =
           GitHubSettings
             { apiVersion = "2022-11-28"
@@ -696,11 +697,16 @@ newTimedRepoTokens cfg = do
   pure $ GitHubRepoTokens $ HM.fromList $ NE.toList repoToks
 
 data GitHubConfig = GitHubConfig
-  { appName :: T.Text
-  , appID :: Int
-  , privKey :: EncodeSigner
+  { appName :: !T.Text
+  , appID :: !AppID
+  , privKey :: !EncodeSigner
   }
   deriving (Generic)
+
+newtype AppID = AppID {getAppID :: Int}
+  deriving (Eq, Ord, Generic)
+  deriving newtype (Show, FromJSON, ToJSON)
+  deriving newtype (Num, Real, Enum, Integral)
 
 commentIssue ::
   ( GitHub :> es
