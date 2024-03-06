@@ -5,10 +5,13 @@ DEST="$(pwd)/${1}"
 echo "[*] Create directory tree"
 TESTS="${DEST}"/tests
 TESTS_LIST="${DEST}"/tests.list
+touch "${TESTS_LIST}"
 EXES="${DEST}"/exes
 EXES_LIST="${DEST}"/exes.list
+touch "${EXES_LIST}"
 BENCHS="${DEST}"/benchs
 BENCHS_LIST="${DEST}"/benchs.list
+touch "${BENCHS_LIST}"
 set -x
 mkdir -p "${TESTS}" "${BENCHS}" "${EXES}"
 set +x
