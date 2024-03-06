@@ -7,7 +7,7 @@ cabal-version: 2.2
 name:           beam-sqlite-effectful
 version:        0.1.0.0
 synopsis:       An effectful binding to beam-sqlite
-description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/tree/beam-sqlite-effectful#readme>
+description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/tree/master/beam-sqlite-effectful#readme>
 category:       Database, Control
 homepage:       https://github.com/deepflowinc/effectful-extras#readme
 bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
