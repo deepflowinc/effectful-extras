@@ -1,0 +1,52 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           effectful-expiry
+version:        0.1.0.0
+synopsis:       Auto-updated resources with expiration time for effectful.
+description:    Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/tree/master/effectful-expiry#readme>
+category:       Control, Concurrency, Caching
+homepage:       https://github.com/deepflowinc/effectful-extras#readme
+bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
+author:         DeepFlow, Inc.
+maintainer:     DeepFlow, Inc.
+copyright:      2024 (c) DeepFlow, Inc.
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+tested-with:
+    GHC == 9.2.8
+  , GHC == 9.4.8
+  , GHC == 9.6.4
+  , GHC == 9.8.2
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/deepflowinc/effectful-extras
+  subdir: effectful-expiry
+
+library
+  exposed-modules:
+      Effectful.Concurrent.TimedResource
+  other-modules:
+      Paths_effectful_expiry
+  autogen-modules:
+      Paths_effectful_expiry
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-packages
+  build-depends:
+      base >=4.7 && <5
+    , effectful
+    , effectful-core
+    , safe-exceptions
+    , time
+    , time-effectful
+    , unliftio
+  default-language: Haskell2010
