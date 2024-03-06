@@ -19,9 +19,7 @@ module Effectful.Network.GitHub.Apps (
   -- * API Calls
   GitHub,
   GitHubConfig (..),
-  AppID (..),
   CommitHash (..),
-  GitEntryMode (..),
   runGitHubWith,
   runGitHubWith_,
   GitHubException (..),
@@ -38,17 +36,18 @@ module Effectful.Network.GitHub.Apps (
   createBlob,
   BlobResult (..),
   createTree,
-  SHA,
-  TreeEntry (..),
-  TreeEntryType (..),
   TreeResult (..),
-  GitTree (..),
+  SHA,
   fromBlobPaths,
   createTreeFromDirRecur,
+  TreeEntry (..),
+  TreeEntryType (..),
+  GitEntryMode (..),
+  GitTree (..),
+  createCommit,
+  NewCommit (..),
   CommitObj (..),
   CommitTree (..),
-  NewCommit (..),
-  createCommit,
   getCommitObj,
   updateRefs,
   getGitRef,
@@ -702,11 +701,6 @@ data GitHubConfig = GitHubConfig
   , privKey :: EncodeSigner
   }
   deriving (Generic)
-
-newtype AppID = AppID {getAppID :: Int}
-  deriving (Eq, Ord, Generic)
-  deriving newtype (Show, FromJSON, ToJSON)
-  deriving newtype (Num, Real, Enum, Integral)
 
 commentIssue ::
   ( GitHub :> es
