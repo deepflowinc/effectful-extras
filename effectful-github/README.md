@@ -1,4 +1,4 @@
-# typed-process-effectful-extra
+# effectful-github
 
 An effectful handlers to communicate with GitHub API via OAuth or GitHub Apps.
 

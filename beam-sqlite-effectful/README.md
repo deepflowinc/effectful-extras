@@ -1,4 +1,4 @@
-# typed-process-effectful-extra
+# beam-sqlite-effectful
 
 An effectful binding to beam-sqlite.
 
