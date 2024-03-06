@@ -1,0 +1,78 @@
+name:                effectful-github
+version:             0.1.0.0
+github:              "deepflowinc/effectful-extras/effectful-github"
+license:             BSD-3-Clause
+author:              "DeepFlow, Inc."
+maintainer:          "DeepFlow, Inc."
+copyright:           "2024 (c) DeepFlow, Inc."
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+tested-with:
+- GHC == 9.2.8
+- GHC == 9.4.8
+- GHC == 9.6.4
+- GHC == 9.8.2
+
+# Metadata used when publishing your package
+synopsis:            GitHub bindings for effectful, both for OAuth and Apps
+category:            Database, Control
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/deepflowinc/effectful-extras/tree/master/effectful-github#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+- -Wunused-packages
+
+library:
+  source-dirs: src
+  dependencies:
+  - aeson
+  - base64-bytestring
+  - bytestring
+  - data-fix
+  - deepseq
+  - effectful
+  - effectful-core
+  - effectful-expiry
+  - github
+  - github-rest
+  - hashable
+  - http-client
+  - jwt
+  - log-effectful
+  - path-tagged
+  - path-tagged-effectful
+  - safe-exceptions
+  - streaming-http-effectful
+  - text
+  - unordered-containers
+  - time
+
+tests:
+  effectful-github-test:
+    source-dirs: test
+    main: Test.hs
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - effectful-github
