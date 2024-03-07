@@ -2875,3 +2875,4 @@ allow-newer:
   beam-sqlite:attoparsec,
   beam-sqlite:bytestring,
   beam-sqlite:text,
+  typed-process-effectful:bytestring,
