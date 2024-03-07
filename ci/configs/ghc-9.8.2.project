@@ -2861,6 +2861,8 @@ constraints: abstract-deque ==0.3,
              zstd ==0.1.3.0
 
 allow-newer:
+  beam-core:aeson,
+  beam-core:bytestring,
   beam-migrate:aeson,
   beam-migrate:bytestring,
   beam-migrate:deepseq,
