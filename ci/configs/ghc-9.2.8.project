@@ -3063,3 +3063,6 @@ constraints: abstract-deque ==0.3,
              zot ==0.0.3,
              zstd ==0.1.3.0,
              ztail ==1.2.0.3
+
+allow-newer:
+  text-builder-linear:text
