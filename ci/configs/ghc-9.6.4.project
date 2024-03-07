@@ -3348,3 +3348,6 @@ constraints: abstract-deque ==0.3,
              zot ==0.0.3,
              zstd ==0.1.3.0,
              zxcvbn-hs ==0.3.6
+
+allow-newer:
+  beam-sqlite:pqueue
