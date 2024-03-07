@@ -38,7 +38,7 @@ To add/remove a specific ghc version to/from the tested versions, you can just a
 ```cabal
 import: ../../cabal.project
 -- FIXME: Use Appropriate timestamp for index-state
-index-state: hackage.haskell.org 2024-02-05T22:44:18Z
+index-state: hackage.haskell.org 2024-03-07T01:16:36Z
 ```
 
 Note that the actual value of `index-state` should be sufficiently new.
@@ -51,7 +51,7 @@ curl --location https://www.stackage.org/nightly/cabal.config > ./ci/configs/ghc
 cat <<EOF >>./ci/configs/ghc-9.8.1.project
 import: ../../cabal.project
 -- FIXME: Use an appropriate timestamp for index-state
-index-state: hackage.haskell.org 2024-02-05T22:44:18Z
+index-state: hackage.haskell.org 2024-03-07T01:16:36Z
 EOF
 ```
 
