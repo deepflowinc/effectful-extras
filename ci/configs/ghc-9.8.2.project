@@ -2859,5 +2859,6 @@ constraints: abstract-deque ==0.3,
 
 allow-newer:
   beam-sqlite:aeson,
+  beam-sqlite:text,
   beam-sqlite:attoparsec,
   beam-sqlite:bytestring,
