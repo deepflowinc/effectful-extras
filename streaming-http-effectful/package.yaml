@@ -22,6 +22,12 @@ description:         Please see the README on GitHub at <https://github.com/deep
 dependencies:
 - base >= 4.7 && < 5
 
+flags:
+  attoparsec-aeson:
+    manual: false
+    default: true
+    description: Uses aeson >=2.1 and attoparsec-aeson
+
 ghc-options:
 - -Wall
 - -Wcompat
@@ -36,8 +42,16 @@ ghc-options:
 
 library:
   source-dirs: src
+  when:
+  - condition: flag(attoparsec-aeson)
+    then:
+      dependencies:
+      - aeson >= 2.1
+      - attoparsec-aeson
+    else:
+      dependencies:
+      - aeson <2.1
   dependencies:
-  - aeson
   - attoparsec
   - bytestring
   - effectful
