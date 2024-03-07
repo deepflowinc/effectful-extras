@@ -2862,6 +2862,7 @@ constraints: abstract-deque ==0.3,
 
 allow-newer:
   beam-migrate:aeson,
+  beam-migrate:bytestring,
   beam-sqlite:aeson,
   beam-sqlite:text,
   beam-sqlite:attoparsec,
