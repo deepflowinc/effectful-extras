@@ -2858,4 +2858,6 @@ constraints: abstract-deque ==0.3,
              zstd ==0.1.3.0
 
 allow-newer:
-  beam-sqlite:aeson,attoparsec
+  beam-sqlite:aeson,
+  beam-sqlite:attoparsec,
+  beam-sqlite:bytestring,

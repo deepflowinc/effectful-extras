@@ -3350,5 +3350,5 @@ constraints: abstract-deque ==0.3,
              zxcvbn-hs ==0.3.6
 
 allow-newer:
-  beam-sqlite:pqueue
+  beam-sqlite:pqueue,
   beam-migrate:pqueue
