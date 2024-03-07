@@ -2865,6 +2865,7 @@ allow-newer:
   beam-migrate:bytestring,
   beam-migrate:deepseq,
   beam-migrate:ghc-prim,
+  beam-migrate:pqueue,
   beam-migrate:text,
   beam-sqlite:aeson,
   beam-sqlite:attoparsec,
