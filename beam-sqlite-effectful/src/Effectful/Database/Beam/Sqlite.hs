@@ -33,6 +33,7 @@ import Control.Concurrent (getNumCapabilities)
 import Control.Exception.Safe
 import Control.Monad (when)
 import Data.Function (fix, (&))
+import Data.Functor ((<&>))
 import Data.Functor.Identity (Identity)
 import Data.Pool
 import Data.Text qualified as T
