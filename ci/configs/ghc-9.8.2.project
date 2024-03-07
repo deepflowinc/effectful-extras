@@ -2864,6 +2864,7 @@ allow-newer:
   beam-core:aeson,
   beam-core:bytestring,
   beam-core:ghc-prim,
+  beam-core:text,
   beam-migrate:aeson,
   beam-migrate:bytestring,
   beam-migrate:deepseq,
