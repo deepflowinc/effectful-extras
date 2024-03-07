@@ -1,6 +1,8 @@
 {-# LANGUAGE GHC2021 #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -22,6 +24,7 @@ module Effectful.Database.Beam.Sqlite (
   module Query,
   selectMany,
   selectOne,
+  selectFirst,
   withSqlPool,
   SqlitePool (),
 ) where
@@ -83,7 +86,19 @@ selectOne ::
   (SqliteTransaction :> es, Beam.FromBackendRow Sqlite.Sqlite a) =>
   Beam.SqlSelect Sqlite.Sqlite a ->
   Eff es (Maybe a)
-selectOne = liftSqliteM . Beam.runSelectReturningFirst
+selectOne = liftSqliteM . Beam.runSelectReturningOne
+
+selectFirst ::
+  (SqliteTransaction :> es, Beam.FromBackendRow Sqlite.Sqlite a) =>
+  Beam.SqlSelect Sqlite.Sqlite a ->
+  Eff es (Maybe a)
+#if MIN_VERSION_beam_core(0,10,0)
+selectFirst = liftSqliteM . Beam.runSelectReturningFirst
+#else
+selectFirst q = selectMany q <&> \case
+  [] -> Nothing
+  x : _ -> Just x
+#endif
 
 insertMany ::
   ( SqliteTransaction :> es
