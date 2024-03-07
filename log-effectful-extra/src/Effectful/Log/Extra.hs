@@ -23,7 +23,6 @@ import Data.Semigroup.Foldable (intercalateMap1)
 import Data.String (IsString (..))
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.Text.Builder.Linear as TBL
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.IO as T
 import Data.Time (TimeZone (..), UTCTime (..), defaultTimeLocale, getCurrentTimeZone, utcToZonedTime)
@@ -36,6 +35,7 @@ import GHC.IO.Handle.FD (handleToFd)
 import Path.Tagged (File, PathTo, toFilePath)
 import System.Exit (exitFailure)
 import System.IO (BufferMode (..), Handle, IOMode (AppendMode), hClose, hSetBuffering, openFile, stderr)
+import qualified Text.Builder as TBL
 
 runStdErrLogger ::
   (IOE :> es) =>
@@ -112,7 +112,7 @@ renderLogMessage ::
   LogMessage ->
   T.Text
 renderLogMessage terminal zone mInsertionTime LogMessage {..} =
-  TBL.runBuilder $
+  TBL.run $
     mconcat
       [ coled sndCol $ fmtTime' lmTime
       , " "
@@ -120,16 +120,16 @@ renderLogMessage terminal zone mInsertionTime LogMessage {..} =
       , coled lvlCol ("[" <> lvlTxt <> "]")
       , " "
       , "("
-      , intercalateMap1 "." TBL.fromText $ lmComponent :| lmDomain
+      , intercalateMap1 "." TBL.text $ lmComponent :| lmDomain
       , "): "
-      , TBL.fromText lmMessage
+      , TBL.text lmMessage
       ]
       <> if lmData == emptyObject
         then mempty
         else " " <> textifyData lmData
   where
     textifyData =
-      TBL.fromText
+      TBL.text
         . TE.decodeUtf8
         . LBS.toStrict
         . encodePretty' defConfig {confIndent = Spaces 2}

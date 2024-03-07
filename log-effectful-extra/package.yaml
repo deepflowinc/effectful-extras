@@ -47,5 +47,5 @@ library:
   - safe-exceptions
   - semigroupoids
   - text
-  - text-builder-linear
+  - text-builder
   - time
