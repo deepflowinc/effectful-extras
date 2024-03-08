@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE NoFieldSelectors #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Effectful.Random.Static (
   Random,
@@ -38,7 +39,6 @@ module Effectful.Random.Static (
 
   -- ** Compat with 'Rand.StatefulGen'
   EffGen (..),
-  FrozenEffGen (..),
 
   -- * Re-exports
   RandomGen (),
@@ -177,25 +177,20 @@ instance (Concurrent :> es, Random :> es) => RS.StatefulGen EffGen (Eff es) wher
   uniformShortByteString = const . genShortByteString
   {-# INLINE uniformShortByteString #-}
 
-newtype FrozenEffGen = FrozenEffGen {getFrozenEffGen :: StdGen}
-  deriving (Show, Eq, Generic)
-  deriving newtype (RandomGen)
-
-instance (Concurrent :> es, Random :> es) => RS.FrozenGen FrozenEffGen (Eff es) where
-  type MutableGen FrozenEffGen (Eff es) = EffGen
+instance (Concurrent :> es, Random :> es) => RS.FrozenGen StdGen (Eff es) where
+  type MutableGen StdGen (Eff es) = EffGen
   freezeGen = const $ do
     Random mg <- getStaticRep @Random
-    FrozenEffGen <$> readMVar mg
+    readMVar mg
   {-# INLINE freezeGen #-}
-  thawGen (FrozenEffGen g) = do
+  thawGen g = do
     Random mg <- getStaticRep @Random
     EffGen <$ swapMVar mg g
   {-# INLINE thawGen #-}
 
 instance
   (Concurrent :> es, Random :> es) =>
-  RS.RandomGenM EffGen FrozenEffGen (Eff es)
+  RS.RandomGenM EffGen StdGen (Eff es)
   where
-  applyRandomGenM :: forall a. (FrozenEffGen -> (a, FrozenEffGen)) -> EffGen -> Eff es a
-  applyRandomGenM = const . coerce (withStdGen @es @a)
+  applyRandomGenM = const . withStdGen
   {-# INLINE applyRandomGenM #-}
