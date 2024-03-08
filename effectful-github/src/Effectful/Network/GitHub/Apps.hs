@@ -116,7 +116,7 @@ import Effectful.Concurrent.TimedResource (Expiration, TimedResource, newTimedRe
 import Effectful.Dispatch.Dynamic (HasCallStack, interpret, send)
 import Effectful.Dispatch.Static (SideEffects (..), getStaticRep, unsafeEff_)
 import Effectful.FileSystem (FileSystem, getFileSize)
-import Effectful.FileSystem.Extra (listDir, makeAbsolute, readFileBinaryLazy)
+import Effectful.FileSystem.Tagged (listDir, makeAbsolute, readFileBinaryLazy)
 import Effectful.Internal.Monad (StaticRep, evalStaticRep)
 import Effectful.Log (Log, logTrace)
 import Effectful.Network.Http

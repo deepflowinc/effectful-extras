@@ -12,7 +12,7 @@ import Control.Exception.Safe
 import Effectful
 import Effectful.Dispatch.Static (unsafeEff_)
 import Effectful.FileSystem (FileSystem)
-import Effectful.FileSystem.Extra (createDirIfMissing)
+import Effectful.FileSystem.Tagged (createDirIfMissing)
 import Lukko
 import Path.Tagged
 
