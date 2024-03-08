@@ -41,6 +41,7 @@ library
     , bytestring
     , effectful
     , effectful-core
+    , primitive
     , random
     , vector
   default-language: Haskell2010

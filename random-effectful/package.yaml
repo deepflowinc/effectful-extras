@@ -42,3 +42,4 @@ library:
   - random
   - vector
   - bytestring
+  - primitive

@@ -1,8 +1,10 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -33,12 +35,16 @@ module Effectful.Random.Static (
   genByteString,
   genShortByteString,
   withStdGen,
+  withStdGenM,
 
   -- ** Additional utilities
   element,
 
   -- ** Compat with 'Rand.StatefulGen'
   EffGen (..),
+  newPrimGenM,
+  PrimGenM,
+  PrimGen,
 
   -- * Re-exports
   RandomGen (),
@@ -46,15 +52,18 @@ module Effectful.Random.Static (
   mkStdGen,
 ) where
 
+import Control.Monad.Primitive (stToPrim)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.List.NonEmpty as NE
+import Data.STRef (readSTRef, writeSTRef)
 import qualified Data.Vector as V
 import Effectful
 import Effectful.Concurrent.MVar.Strict (Concurrent, MVar, modifyMVar, newMVar, readMVar, swapMVar)
 import Effectful.Dispatch.Static
+import Effectful.Prim (Prim, PrimStateEff)
 import GHC.Generics (Generic)
 import System.Random (RandomGen (), StdGen, mkStdGen)
 import qualified System.Random as Rand
@@ -161,6 +170,16 @@ withStdGen f = do
     let (a, g') = f g
      in pure (g', a)
 
+withStdGenM ::
+  (Concurrent :> es, Random :> es) =>
+  (StdGen -> Eff es (a, StdGen)) ->
+  Eff es a
+withStdGenM f = do
+  Random mg <- getStaticRep @Random
+  modifyMVar mg $ \g -> do
+    (!a, !g') <- f g
+    pure (g', a)
+
 instance (Concurrent :> es, Random :> es) => RS.StatefulGen EffGen (Eff es) where
   uniformWord32R = const . withStdGen . Rand.genWord32R
   {-# INLINE uniformWord32R #-}
@@ -193,4 +212,61 @@ instance
   RS.RandomGenM EffGen StdGen (Eff es)
   where
   applyRandomGenM = const . withStdGen
+  {-# INLINE applyRandomGenM #-}
+
+applyPrimGen ::
+  (Prim :> es) =>
+  (g -> (a, g)) ->
+  RS.STGenM g PrimStateEff ->
+  Eff es a
+applyPrimGen f (RS.STGenM ref) = do
+  g <- stToPrim $ readSTRef ref
+  case f g of
+    (!a, !g') -> a <$ stToPrim (writeSTRef ref g')
+{-# INLINE applyPrimGen #-}
+
+-- | Uses 'Prim' effect to use 'RS.STGen'
+instance
+  (RandomGen g, Prim :> es, s ~ PrimStateEff) =>
+  RS.StatefulGen (RS.STGenM g s) (Eff es)
+  where
+  uniformWord32R = applyPrimGen . Rand.genWord32R
+  {-# INLINE uniformWord32R #-}
+  uniformWord64R = applyPrimGen . Rand.genWord64R
+  {-# INLINE uniformWord64R #-}
+  uniformWord8 = applyPrimGen Rand.genWord8
+  {-# INLINE uniformWord8 #-}
+  uniformWord16 = applyPrimGen Rand.genWord16
+  {-# INLINE uniformWord16 #-}
+  uniformWord32 = applyPrimGen Rand.genWord32
+  {-# INLINE uniformWord32 #-}
+  uniformWord64 = applyPrimGen Rand.genWord64
+  {-# INLINE uniformWord64 #-}
+  uniformShortByteString = applyPrimGen . Rand.genShortByteString
+  {-# INLINE uniformShortByteString #-}
+
+type PrimGenM g = RS.STGenM g PrimStateEff
+
+type PrimGen = RS.STGen
+
+newPrimGenM :: (Prim :> es) => g -> Eff es (PrimGenM g)
+newPrimGenM = stToPrim . RS.newSTGenM
+
+-- | Uses 'Prim' effect to use 'RS.STGen'
+instance
+  (RandomGen g, Prim :> es) =>
+  RS.FrozenGen (RS.STGen g) (Eff es)
+  where
+  type MutableGen (RS.STGen g) (Eff es) = RS.STGenM g PrimStateEff
+  freezeGen = stToPrim . RS.freezeGen
+  {-# INLINE freezeGen #-}
+
+  thawGen = stToPrim . RS.thawGen
+  {-# INLINE thawGen #-}
+
+instance
+  (RandomGen g, Prim :> es, s ~ PrimStateEff) =>
+  RS.RandomGenM (RS.STGenM g s) g (Eff es)
+  where
+  applyRandomGenM = applyPrimGen
   {-# INLINE applyRandomGenM #-}
