@@ -29,7 +29,7 @@ source-repository head
 library
   exposed-modules:
       Effectful.FileSystem.Tagged
-      Effectful.Temporary.Extra
+      Effectful.Temporary.Tagged
   other-modules:
       Paths_path_tagged_effectful
   autogen-modules:
