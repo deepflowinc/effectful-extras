@@ -28,7 +28,7 @@ source-repository head
 
 library
   exposed-modules:
-      Effectful.FileSystem.Extra
+      Effectful.FileSystem.Tagged
       Effectful.Temporary.Extra
   other-modules:
       Paths_path_tagged_effectful
@@ -42,6 +42,8 @@ library
     , bytestring
     , effectful
     , path-tagged
+    , safe-exceptions
     , text
+    , time
     , unix
   default-language: Haskell2010
