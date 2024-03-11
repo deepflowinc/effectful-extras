@@ -124,8 +124,7 @@ import GHC.Generics (Generic)
 import GHC.OldList qualified as L
 import GitHub.REST (GHEndpoint (..), GitHubSettings (..), GitHubT, KeyValue (..), StdMethod (..), Token (..), queryGitHub, queryGitHubAll, queryGitHub_, runGitHubT)
 import GitHub.REST.Auth (getJWTToken)
-import Network.HTTP.Client (RequestBody (..), responseTimeoutNone)
-import Network.HTTP.Client qualified as Http
+import Network.HTTP.Client (responseTimeoutNone)
 import Path.Tagged
 import Path.Tagged.IO (makeRelative)
 import Web.JWT (EncodeSigner)
@@ -194,9 +193,9 @@ runGitHubWith_ ::
   Eff es a
 runGitHubWith_ cfg act = do
   toks <- newAPITokens cfg
-  runGitHubWith cfg toks act
+  runGitHubWith toks act
 
-data GitHubException = UnknownRepo Repository
+newtype GitHubException = UnknownRepo Repository
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (Exception)
 
@@ -204,17 +203,16 @@ runGitHubWith ::
   ( Http :> es
   , Expiration :> es
   ) =>
-  APITokenConfig ->
   APITokens ->
   Eff (GitHub ': es) a ->
   Eff es a
-runGitHubWith cfg tok = do
+runGitHubWith tok = do
   interpret $ \_env -> \case
     HasRepo repo -> isJust <$> askRepoToken repo tok
     LiftGitHubT repo act -> do
       gh <-
         maybe (throwM $ UnknownRepo repo) pure
-          =<< askRepoSetting cfg tok repo
+          =<< askRepoSetting tok.config tok repo
       unsafeEff_ $ runGitHubT gh act
     CallEndpointJSON req -> httpJSON req
     CallEndpointLbs req -> httpLbs req
@@ -222,7 +220,7 @@ runGitHubWith cfg tok = do
       btok <-
         maybe (throwM $ UnknownRepo repo) pure
           =<< askRepoToken repo tok
-      rawHttpReqImpl cfg btok endpoint
+      rawHttpReqImpl tok.config btok endpoint
 
 parseRawRepoAPIRequest ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
@@ -340,7 +338,7 @@ createBlob src = do
   req0 <- parseRawRepoAPIRequest "git/blobs"
   let req =
         req0
-          { Http.method = "POST"
+          { method = "POST"
           , requestBody =
               RequestBodyLBS $
                 J.encode $
@@ -424,7 +422,7 @@ createTree tree = do
   req0 <- parseRawRepoAPIRequest "git/trees"
   let req =
         req0
-          { Http.method = "POST"
+          { method = "POST"
           , requestBody = RequestBodyLBS $ J.encode tree
           }
   responseBody <$> callEndpointJSON req
@@ -563,7 +561,7 @@ createCommit ::
   Eff es CommitObj
 createCommit comm = do
   req0 <- parseRawRepoAPIRequest "git/commits"
-  let req = req0 {Http.method = "POST", requestBody = RequestBodyLBS $ J.encode comm}
+  let req = req0 {method = "POST", requestBody = RequestBodyLBS $ J.encode comm}
   responseBody <$> callEndpointJSON req
 
 updateRefs ::
@@ -576,7 +574,7 @@ updateRefs ::
   Eff es J.Value
 updateRefs ref commit = do
   req0 <- parseRawRepoAPIRequest $ "git/refs/" <> T.unpack ref
-  let req = req0 {Http.method = "PATCH", requestBody = RequestBodyLBS $ J.encode $ J.object ["sha" J..= commit]}
+  let req = req0 {method = "PATCH", requestBody = RequestBodyLBS $ J.encode $ J.object ["sha" J..= commit]}
   fmap responseBody . callEndpointJSON $ req
 
 decodeToken :: T.Text -> Token
@@ -589,8 +587,9 @@ newtype GitHubRepoTokens = GitHubRepoTokens {repoTokens :: HashMap Repository (T
   deriving (Generic)
 
 data APITokens = APITokens
-  { app :: TimedResource GitHubAppToken
-  , repos :: GitHubRepoTokens
+  { app :: {-# UNPACK #-} !(TimedResource GitHubAppToken)
+  , repos :: !GitHubRepoTokens
+  , config :: !APITokenConfig
   }
   deriving (Generic)
 
@@ -598,9 +597,9 @@ newAPITokens ::
   (Expiration :> es) =>
   APITokenConfig ->
   Eff es APITokens
-newAPITokens cfg = do
-  app <- newTimedAppToken cfg
-  repos <- newTimedRepoTokens cfg
+newAPITokens config = do
+  app <- newTimedAppToken config
+  repos <- newTimedRepoTokens config
   pure APITokens {..}
 
 askRepoSetting ::
