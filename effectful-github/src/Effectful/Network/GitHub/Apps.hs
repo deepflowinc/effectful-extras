@@ -721,7 +721,7 @@ commentIssue issue text = do
     queryGitHub_
       GHEndpoint
         { method = POST
-        , endpoint = "/repo/:org/:repo/issues/:pr/comments"
+        , endpoint = "/repos/:org/:repo/issues/:pr/comments"
         , endpointVals = ["org" := repo.owner, "repo" := repo.name, "pr" := issue]
         , ghData = ["body" := text]
         }
