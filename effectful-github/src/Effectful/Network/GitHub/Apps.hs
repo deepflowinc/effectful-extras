@@ -289,18 +289,14 @@ data Pull = Pull
 
 getPull ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
-  Repository ->
   Int ->
   Eff es Pull
-getPull repo pull =
-  callGitHubAPI $
-    queryGitHub
-      GHEndpoint
-        { method = GET
-        , ghData = []
-        , endpointVals = ["owner" := repo.owner, "repo" := repo.name, "pull" := pull]
-        , endpoint = "/repos/:owner/:repo/pulls/:pull"
-        }
+getPull pull = do
+  req <- parseRawRepoAPIRequest $ "pulls/" <> show pull
+  callEndpointLbs req >>= \rsp ->
+    case J.eitherDecode $ responseBody rsp of
+      Right v -> pure v
+      Left err -> throwM $ userError $ err <> "\n" <> show (req, rsp)
 
 callGitHubAPI ::
   ( GitHub :> es
