@@ -56,6 +56,7 @@ module Effectful.Network.GitHub.Apps (
   GitObject (..),
   getPull,
   Pull (..),
+  Target (..),
 
   -- *** Auxiliary function
   modeForEntry,
@@ -269,6 +270,10 @@ getRawContent commit fp = do
       "contents/" <> fp <> "?ref=" <> T.unpack commit.hash
   responseBody <$> callEndpointLbs (req {requestHeaders = ("Accept", "application/vnd.github.raw") : requestHeaders req})
 
+data Target = Target {label :: !Text, ref :: !Text, sha :: !CommitHash}
+  deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 data Pull = Pull
   { url :: String
   , id :: Int
@@ -276,6 +281,8 @@ data Pull = Pull
   , number :: Int
   , title :: Maybe Text
   , body :: Maybe Text
+  , head :: Target
+  , base :: Target
   }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
