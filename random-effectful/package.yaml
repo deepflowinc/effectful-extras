@@ -40,3 +40,6 @@ library:
   - effectful
   - effectful-core
   - random
+  - vector
+  - bytestring
+  - primitive

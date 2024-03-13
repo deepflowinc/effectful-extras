@@ -14,6 +14,7 @@
 module Effectful.Network.Http (
   Http,
   Request (..),
+  RequestBody (..),
   Response (..),
   runSimpleHttp,
   httpLbs,

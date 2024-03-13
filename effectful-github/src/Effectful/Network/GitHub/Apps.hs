@@ -56,6 +56,7 @@ module Effectful.Network.GitHub.Apps (
   GitObject (..),
   getPull,
   Pull (..),
+  Target (..),
 
   -- *** Auxiliary function
   modeForEntry,
@@ -86,6 +87,7 @@ module Effectful.Network.GitHub.Apps (
   StdMethod (..),
 ) where
 
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Control.Exception (Exception)
 import Control.Exception.Safe (throwM)
@@ -116,7 +118,7 @@ import Effectful.Concurrent.TimedResource (Expiration, TimedResource, newTimedRe
 import Effectful.Dispatch.Dynamic (HasCallStack, interpret, send)
 import Effectful.Dispatch.Static (SideEffects (..), getStaticRep, unsafeEff_)
 import Effectful.FileSystem (FileSystem, getFileSize)
-import Effectful.FileSystem.Extra (listDir, makeAbsolute, readFileBinaryLazy)
+import Effectful.FileSystem.Tagged (listDir, makeAbsolute, readFileBinaryLazy)
 import Effectful.Internal.Monad (StaticRep, evalStaticRep)
 import Effectful.Log (Log, logTrace)
 import Effectful.Network.Http
@@ -124,8 +126,7 @@ import GHC.Generics (Generic)
 import GHC.OldList qualified as L
 import GitHub.REST (GHEndpoint (..), GitHubSettings (..), GitHubT, KeyValue (..), StdMethod (..), Token (..), queryGitHub, queryGitHubAll, queryGitHub_, runGitHubT)
 import GitHub.REST.Auth (getJWTToken)
-import Network.HTTP.Client (RequestBody (..), responseTimeoutNone)
-import Network.HTTP.Client qualified as Http
+import Network.HTTP.Client (responseTimeoutNone)
 import Path.Tagged
 import Path.Tagged.IO (makeRelative)
 import Web.JWT (EncodeSigner)
@@ -194,9 +195,9 @@ runGitHubWith_ ::
   Eff es a
 runGitHubWith_ cfg act = do
   toks <- newAPITokens cfg
-  runGitHubWith cfg toks act
+  runGitHubWith toks act
 
-data GitHubException = UnknownRepo Repository
+newtype GitHubException = UnknownRepo Repository
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (Exception)
 
@@ -204,17 +205,16 @@ runGitHubWith ::
   ( Http :> es
   , Expiration :> es
   ) =>
-  APITokenConfig ->
   APITokens ->
   Eff (GitHub ': es) a ->
   Eff es a
-runGitHubWith cfg tok = do
+runGitHubWith tok = do
   interpret $ \_env -> \case
     HasRepo repo -> isJust <$> askRepoToken repo tok
     LiftGitHubT repo act -> do
       gh <-
         maybe (throwM $ UnknownRepo repo) pure
-          =<< askRepoSetting cfg tok repo
+          =<< askRepoSetting tok.config tok repo
       unsafeEff_ $ runGitHubT gh act
     CallEndpointJSON req -> httpJSON req
     CallEndpointLbs req -> httpLbs req
@@ -222,7 +222,7 @@ runGitHubWith cfg tok = do
       btok <-
         maybe (throwM $ UnknownRepo repo) pure
           =<< askRepoToken repo tok
-      rawHttpReqImpl cfg btok endpoint
+      rawHttpReqImpl tok.config btok endpoint
 
 parseRawRepoAPIRequest ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
@@ -271,6 +271,10 @@ getRawContent commit fp = do
       "contents/" <> fp <> "?ref=" <> T.unpack commit.hash
   responseBody <$> callEndpointLbs (req {requestHeaders = ("Accept", "application/vnd.github.raw") : requestHeaders req})
 
+data Target = Target {label :: !Text, ref :: !Text, sha :: !CommitHash}
+  deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 data Pull = Pull
   { url :: String
   , id :: Int
@@ -278,24 +282,22 @@ data Pull = Pull
   , number :: Int
   , title :: Maybe Text
   , body :: Maybe Text
+  , head :: Target
+  , base :: Target
   }
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 getPull ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
-  Repository ->
   Int ->
   Eff es Pull
-getPull repo pull =
-  callGitHubAPI $
-    queryGitHub
-      GHEndpoint
-        { method = GET
-        , ghData = []
-        , endpointVals = ["owner" := repo.owner, "repo" := repo.name, "pull" := pull]
-        , endpoint = "/repos/:owner/:repo/pulls/:pull"
-        }
+getPull pull = do
+  req <- parseRawRepoAPIRequest $ "pulls/" <> show pull
+  callEndpointLbs req >>= \rsp ->
+    case J.eitherDecode $ responseBody rsp of
+      Right v -> pure v
+      Left err -> throwM $ userError $ err <> "\n" <> show (req, rsp)
 
 callGitHubAPI ::
   ( GitHub :> es
@@ -340,7 +342,7 @@ createBlob src = do
   req0 <- parseRawRepoAPIRequest "git/blobs"
   let req =
         req0
-          { Http.method = "POST"
+          { method = "POST"
           , requestBody =
               RequestBodyLBS $
                 J.encode $
@@ -424,7 +426,7 @@ createTree tree = do
   req0 <- parseRawRepoAPIRequest "git/trees"
   let req =
         req0
-          { Http.method = "POST"
+          { method = "POST"
           , requestBody = RequestBodyLBS $ J.encode tree
           }
   responseBody <$> callEndpointJSON req
@@ -544,7 +546,12 @@ getGitRef ref =
 
 data CommitObj = CommitObj {sha :: CommitHash, tree :: CommitTree}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+
+instance FromJSON CommitObj where
+  parseJSON = J.withObject "commit object" \dic -> do
+    sha <- dic J..: "sha" <|> ((J..: "sha") =<< dic J..: "commit")
+    tree <- dic J..: "tree" <|> ((J..: "tree") =<< dic J..: "commit")
+    pure CommitObj {..}
 
 data CommitTree = CommitTree {sha :: SHA, url :: String}
   deriving (Show, Eq, Ord, Generic)
@@ -562,8 +569,10 @@ createCommit ::
   NewCommit ->
   Eff es CommitObj
 createCommit comm = do
+  -- NOTE: コミットの情報を取得するときは @git/@ はつけないが、作成するときは、
+  -- git オブジェクトの操作を伴うため、@git/@ をつける。
   req0 <- parseRawRepoAPIRequest "git/commits"
-  let req = req0 {Http.method = "POST", requestBody = RequestBodyLBS $ J.encode comm}
+  let req = req0 {method = "POST", requestBody = RequestBodyLBS $ J.encode comm}
   responseBody <$> callEndpointJSON req
 
 updateRefs ::
@@ -576,7 +585,7 @@ updateRefs ::
   Eff es J.Value
 updateRefs ref commit = do
   req0 <- parseRawRepoAPIRequest $ "git/refs/" <> T.unpack ref
-  let req = req0 {Http.method = "PATCH", requestBody = RequestBodyLBS $ J.encode $ J.object ["sha" J..= commit]}
+  let req = req0 {method = "PATCH", requestBody = RequestBodyLBS $ J.encode $ J.object ["sha" J..= commit]}
   fmap responseBody . callEndpointJSON $ req
 
 decodeToken :: T.Text -> Token
@@ -589,8 +598,9 @@ newtype GitHubRepoTokens = GitHubRepoTokens {repoTokens :: HashMap Repository (T
   deriving (Generic)
 
 data APITokens = APITokens
-  { app :: TimedResource GitHubAppToken
-  , repos :: GitHubRepoTokens
+  { app :: {-# UNPACK #-} !(TimedResource GitHubAppToken)
+  , repos :: !GitHubRepoTokens
+  , config :: !APITokenConfig
   }
   deriving (Generic)
 
@@ -598,9 +608,9 @@ newAPITokens ::
   (Expiration :> es) =>
   APITokenConfig ->
   Eff es APITokens
-newAPITokens cfg = do
-  app <- newTimedAppToken cfg
-  repos <- newTimedRepoTokens cfg
+newAPITokens config = do
+  app <- newTimedAppToken config
+  repos <- newTimedRepoTokens config
   pure APITokens {..}
 
 askRepoSetting ::
@@ -722,7 +732,7 @@ commentIssue issue text = do
     queryGitHub_
       GHEndpoint
         { method = POST
-        , endpoint = "/repo/:org/:repo/issues/:pr/comments"
+        , endpoint = "/repos/:org/:repo/issues/:pr/comments"
         , endpointVals = ["org" := repo.owner, "repo" := repo.name, "pr" := issue]
         , ghData = ["body" := text]
         }
@@ -750,5 +760,6 @@ getCommitObj ::
   CommitHash ->
   Eff es CommitObj
 getCommitObj ref =
+  -- NOTE: コミットの情報を取得するときは @git/@ はつけない。
   fmap responseBody . callEndpointJSON
-    =<< parseRawRepoAPIRequest ("git/commits/" <> T.unpack ref.hash)
+    =<< parseRawRepoAPIRequest ("commits/" <> T.unpack ref.hash)
