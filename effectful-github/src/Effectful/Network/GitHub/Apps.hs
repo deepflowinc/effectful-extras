@@ -87,6 +87,7 @@ module Effectful.Network.GitHub.Apps (
   StdMethod (..),
 ) where
 
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Control.Exception (Exception)
 import Control.Exception.Safe (throwM)
@@ -545,7 +546,12 @@ getGitRef ref =
 
 data CommitObj = CommitObj {sha :: CommitHash, tree :: CommitTree}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+
+instance FromJSON CommitObj where
+  parseJSON = J.withObject "commit object" \dic -> do
+    sha <- dic J..: "sha" <|> ((J..: "sha") =<< dic J..: "commit")
+    tree <- dic J..: "tree" <|> ((J..: "tree") =<< dic J..: "commit")
+    pure CommitObj {..}
 
 data CommitTree = CommitTree {sha :: SHA, url :: String}
   deriving (Show, Eq, Ord, Generic)
