@@ -563,6 +563,8 @@ createCommit ::
   NewCommit ->
   Eff es CommitObj
 createCommit comm = do
+  -- NOTE: コミットの情報を取得するときは @git/@ はつけないが、作成するときは、
+  -- git オブジェクトの操作を伴うため、@git/@ をつける。
   req0 <- parseRawRepoAPIRequest "git/commits"
   let req = req0 {method = "POST", requestBody = RequestBodyLBS $ J.encode comm}
   responseBody <$> callEndpointJSON req
@@ -752,5 +754,6 @@ getCommitObj ::
   CommitHash ->
   Eff es CommitObj
 getCommitObj ref =
+  -- NOTE: コミットの情報を取得するときは @git/@ はつけない。
   fmap responseBody . callEndpointJSON
-    =<< parseRawRepoAPIRequest ("git/commits/" <> T.unpack ref.hash)
+    =<< parseRawRepoAPIRequest ("commits/" <> T.unpack ref.hash)
