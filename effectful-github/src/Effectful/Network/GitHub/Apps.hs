@@ -14,6 +14,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoFieldSelectors #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Effectful.Network.GitHub.Apps (
   -- * API Calls
@@ -30,6 +31,8 @@ module Effectful.Network.GitHub.Apps (
   Repository (..),
   parseRepo,
   withGitHubRepo,
+  EncodeSigner,
+  loadSigner,
 
   -- ** High-level bindings
   getRawContent,
@@ -126,6 +129,7 @@ import GHC.Generics (Generic)
 import GHC.OldList qualified as L
 import GitHub.REST (GHEndpoint (..), GitHubSettings (..), GitHubT, KeyValue (..), StdMethod (..), Token (..), queryGitHub, queryGitHubAll, queryGitHub_, runGitHubT)
 import GitHub.REST.Auth (getJWTToken)
+import GitHub.REST.Auth qualified as Orig
 import Network.HTTP.Client (responseTimeoutNone)
 import Path.Tagged
 import Path.Tagged.IO (makeRelative)
@@ -168,6 +172,9 @@ data GitHubRepo :: Effect
 type instance DispatchOf GitHubRepo = 'Static 'NoSideEffects
 
 newtype instance StaticRep GitHubRepo = GHRepo Repository
+
+loadSigner :: (FileSystem :> es) => FilePath -> Eff es EncodeSigner
+loadSigner = unsafeEff_ . Orig.loadSigner
 
 hasRepo :: (GitHub :> es) => Repository -> Eff es Bool
 hasRepo = send . HasRepo
