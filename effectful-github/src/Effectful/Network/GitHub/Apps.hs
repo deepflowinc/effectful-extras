@@ -28,6 +28,7 @@ module Effectful.Network.GitHub.Apps (
 
   -- ** GitHub Repository Context
   GitHubRepo,
+  getCurrentRepo,
   Repository (..),
   parseRepo,
   withGitHubRepo,
@@ -263,6 +264,9 @@ rawHttpReqImpl cfg btok endpoint = do
               ]
           }
   pure req
+
+getCurrentRepo :: (GitHubRepo :> es) => Eff es Repository
+getCurrentRepo = getStaticRep <&> \(GHRepo repo) -> repo
 
 getRawContent ::
   ( GitHub :> es
