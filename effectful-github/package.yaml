@@ -45,6 +45,7 @@ library:
   dependencies:
   - aeson
   - base64-bytestring
+  - binary
   - bytestring
   - data-fix
   - deepseq

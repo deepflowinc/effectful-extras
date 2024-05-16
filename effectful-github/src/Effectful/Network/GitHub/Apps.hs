@@ -98,6 +98,7 @@ import Control.Exception.Safe (throwM)
 import Control.Monad (guard)
 import Data.Aeson (FromJSON, ToJSON, (.=))
 import Data.Aeson qualified as J
+import Data.Binary (Binary)
 import Data.ByteString.Base64.Lazy qualified as B64
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char qualified as C
@@ -140,7 +141,7 @@ type instance DispatchOf GitHub = 'Dynamic
 
 newtype CommitHash = CommitHash {hash :: Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (IsString, ToJSON, FromJSON, NFData, Hashable)
+  deriving newtype (IsString, ToJSON, FromJSON, NFData, Hashable, Binary)
 
 parseRepo :: String -> Maybe Repository
 parseRepo str = do
@@ -150,7 +151,7 @@ parseRepo str = do
 
 data Repository = Repository {owner, name :: !T.Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (Hashable, NFData)
+  deriving anyclass (Hashable, NFData, Binary)
 
 instance ToJSON Repository where
   toJSON Repository {..} = J.toJSON $ owner <> "/" <> name
@@ -207,7 +208,7 @@ runGitHubWith_ cfg act = do
 
 newtype GitHubException = UnknownRepo Repository
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (Exception)
+  deriving anyclass (Exception, NFData, Hashable, Binary)
 
 runGitHubWith ::
   ( Http :> es
@@ -284,7 +285,7 @@ getRawContent commit fp = do
 
 data Target = Target {label :: !Text, ref :: !Text, sha :: !CommitHash}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data Pull = Pull
   { url :: String
@@ -297,7 +298,7 @@ data Pull = Pull
   , base :: Target
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 getPull ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
@@ -331,7 +332,7 @@ withGitHubRepo repo act = do
 
 data BlobResult = BlobResult {url :: Text, sha :: Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 parseRawAPIRequest ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
@@ -380,13 +381,15 @@ data TreeEntry = TreeEntry
   , sha :: SHA
   }
   deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable, Binary)
 
 newtype GitEntryMode = GitEntryMode {getPermission :: Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (IsString, FromJSON, ToJSON, Hashable, NFData)
+  deriving newtype (IsString, FromJSON, ToJSON, Hashable, NFData, Binary)
 
 data TreeEntryType = Blob | Tree
   deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable, Binary)
 
 modeForEntry :: TreeEntryType -> GitEntryMode
 modeForEntry Blob = "100644"
@@ -420,11 +423,11 @@ instance ToJSON TreeEntry where
 
 data TreeResult = TreeResult {url :: Text, sha :: SHA}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data GitTree = GitTree {tree :: [TreeEntry], base_tree :: Maybe SHA}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, NFData, Hashable, Binary)
 
 createTree ::
   ( GitHub :> es
@@ -535,14 +538,14 @@ data RefsResult = RefsResult
   , object :: GitObject
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data GitObject = GitObject
   { url :: Text
   , sha :: CommitHash
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 getGitRef ::
   ( GitHub :> es
@@ -557,6 +560,7 @@ getGitRef ref =
 
 data CommitObj = CommitObj {sha :: CommitHash, tree :: CommitTree}
   deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable, Binary)
 
 instance FromJSON CommitObj where
   parseJSON = J.withObject "commit object" \dic -> do
@@ -566,11 +570,11 @@ instance FromJSON CommitObj where
 
 data CommitTree = CommitTree {sha :: SHA, url :: String}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data NewCommit = NewCommit {message :: Text, tree :: SHA, parents :: [CommitHash]}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 createCommit ::
   ( GitHub :> es
@@ -665,11 +669,11 @@ newTimedAppToken cfg = do
 
 data Installation = Installation {id, target_id :: !Int, account :: !InstallationAccount}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (J.FromJSON, J.ToJSON)
+  deriving anyclass (J.FromJSON, J.ToJSON, NFData, Hashable, Binary)
 
 newtype InstallationAccount = InstAccount {login :: T.Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (J.FromJSON, J.ToJSON)
+  deriving anyclass (J.FromJSON, J.ToJSON, NFData, Hashable, Binary)
 
 data AccessTokenResult = AccessTokenResult
   { expires_at :: ZonedTime
@@ -727,7 +731,7 @@ data GitHubConfig = GitHubConfig
 newtype AppID = AppID {getAppID :: Int}
   deriving (Eq, Ord, Generic)
   deriving newtype (Show, FromJSON, ToJSON)
-  deriving newtype (Num, Real, Enum, Integral)
+  deriving newtype (Num, Real, Enum, Integral, NFData, Hashable, Binary)
 
 commentIssue ::
   ( GitHub :> es
