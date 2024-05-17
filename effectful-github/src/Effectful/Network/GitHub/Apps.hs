@@ -29,6 +29,7 @@ module Effectful.Network.GitHub.Apps (
   -- ** GitHub Repository Context
   GitHubRepo,
   getCurrentRepo,
+  askCurrentRepoToken,
   Repository (..),
   parseRepo,
   withGitHubRepo,
@@ -82,6 +83,7 @@ module Effectful.Network.GitHub.Apps (
   newAPITokens,
   askRepoSetting,
   askRepoToken,
+  hasRepo,
 
   -- * Re-exports
   GHEndpoint (..),
@@ -164,6 +166,7 @@ instance FromJSON Repository where
 
 data GitHub :: Effect where
   HasRepo :: Repository -> GitHub m Bool
+  AskTimedToken :: Repository -> GitHub m (Maybe (TimedResource Token))
   LiftGitHubT :: Repository -> GitHubT IO a -> GitHub m a
   MkRawHttpReq :: Repository -> String -> GitHub m Request
   CallEndpointJSON :: (FromJSON a) => Request -> GitHub m (Response a)
@@ -173,13 +176,16 @@ data GitHubRepo :: Effect
 
 type instance DispatchOf GitHubRepo = 'Static 'NoSideEffects
 
-newtype instance StaticRep GitHubRepo = GHRepo Repository
+data instance StaticRep GitHubRepo = GHRepo !Repository !(TimedResource Token)
 
 loadSigner :: (FileSystem :> es) => FilePath -> Eff es EncodeSigner
 loadSigner = unsafeEff_ . Orig.loadSigner
 
 hasRepo :: (GitHub :> es) => Repository -> Eff es Bool
 hasRepo = send . HasRepo
+
+askRepoTimedToken :: (GitHub :> es) => Repository -> Eff es (Maybe (TimedResource Token))
+askRepoTimedToken = send . AskTimedToken
 
 callEndpointJSON ::
   (HasCallStack, FromJSON a, GitHub :> es) =>
@@ -220,6 +226,7 @@ runGitHubWith ::
 runGitHubWith tok = do
   interpret $ \_env -> \case
     HasRepo repo -> isJust <$> askRepoToken repo tok
+    AskTimedToken repo -> pure $ HM.lookup repo tok.repos.repoTokens
     LiftGitHubT repo act -> do
       gh <-
         maybe (throwM $ UnknownRepo repo) pure
@@ -238,7 +245,7 @@ parseRawRepoAPIRequest ::
   String ->
   Eff es Request
 parseRawRepoAPIRequest endpoint = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   let req =
         "/repos/"
           <> T.unpack repo.owner
@@ -267,7 +274,10 @@ rawHttpReqImpl cfg btok endpoint = do
   pure req
 
 getCurrentRepo :: (GitHubRepo :> es) => Eff es Repository
-getCurrentRepo = getStaticRep <&> \(GHRepo repo) -> repo
+getCurrentRepo = getStaticRep <&> \(GHRepo repo _) -> repo
+
+askCurrentRepoToken :: (Expiration :> es, GitHubRepo :> es) => Eff es Token
+askCurrentRepoToken = getStaticRep >>= \(GHRepo _ tok) -> readResource tok
 
 getRawContent ::
   ( GitHub :> es
@@ -319,16 +329,16 @@ callGitHubAPI ::
   GitHubT IO a ->
   Eff es a
 callGitHubAPI act = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   send $ LiftGitHubT repo act
 
 withGitHubRepo ::
   (GitHub :> es) => Repository -> Eff (GitHubRepo ': es) a -> Eff es a
 withGitHubRepo repo act = do
-  has <- hasRepo repo
-  if has
-    then evalStaticRep (GHRepo repo) act
-    else throwM $ UnknownRepo repo
+  mtok <- askRepoTimedToken repo
+  case mtok of
+    Just tok -> evalStaticRep (GHRepo repo tok) act
+    Nothing -> throwM $ UnknownRepo repo
 
 data BlobResult = BlobResult {url :: Text, sha :: Text}
   deriving (Show, Eq, Ord, Generic)
@@ -340,7 +350,7 @@ parseRawAPIRequest ::
   Eff es Request
 {-# INLINE parseRawAPIRequest #-}
 parseRawAPIRequest uri = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   send $ MkRawHttpReq repo uri
 
 createBlob ::
@@ -742,7 +752,7 @@ commentIssue ::
   Text ->
   Eff es ()
 commentIssue issue text = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   callGitHubAPI $
     queryGitHub_
       GHEndpoint
