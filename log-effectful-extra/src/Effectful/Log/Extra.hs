@@ -103,8 +103,8 @@ withFileLoggerEff ::
   (FileSystem :> es, Clock :> es) =>
   Text ->
   PathTo e r File ->
-  (Logger -> Eff es ()) ->
-  Eff es ()
+  (Logger -> Eff es a) ->
+  Eff es a
 withFileLoggerEff name fp act =
   bracket (Eff.openFile (toFilePath fp) AppendMode) Eff.hClose $ \h ->
     withHandleLoggerEff name h act
@@ -127,7 +127,7 @@ withHandleLogger name h act = do
         liftIO exitFailure
 
 withHandleLoggerEff ::
-  (Clock :> es, FileSystem :> es) => Text -> Handle -> (Logger -> Eff es ()) -> Eff es ()
+  (Clock :> es, FileSystem :> es) => Text -> Handle -> (Logger -> Eff es a) -> Eff es a
 withHandleLoggerEff name h act = do
   term <- unsafeEff_ $ isTerminal =<< handleToFd h
   Eff.hSetBuffering h LineBuffering
@@ -141,6 +141,7 @@ withHandleLoggerEff name h act = do
           runLogT name logger LogTrace $
             logAttention_ $
               "Exception: " <> T.pack (displayException exc)
+        unsafeEff_ exitFailure
 
 withStderrLogger :: (MonadMask m, MonadIO m) => Text -> (Logger -> m a) -> m a
 withStderrLogger name act = do
