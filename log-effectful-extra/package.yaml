@@ -49,3 +49,5 @@ library:
   - text
   - text-builder
   - time
+  - time-effectful
+  - effectful

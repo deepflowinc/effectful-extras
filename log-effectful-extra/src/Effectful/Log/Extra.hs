@@ -3,11 +3,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
 module Effectful.Log.Extra (
+  localLogger,
   runStdErrLogger,
   withFileLogger,
+  withFileLoggerEff,
+  withHandleLoggerEff,
   runFileLogger,
   withStderrLogger,
   module Effectful.Log,
@@ -29,13 +33,25 @@ import Data.Time (TimeZone (..), UTCTime (..), defaultTimeLocale, getCurrentTime
 import Data.Time.Calendar (Day (..))
 import Data.Time.Format (formatTime)
 import Effectful (Eff, IOE, (:>))
+import Effectful.Dispatch.Static (localStaticRep, unsafeEff_)
+import Effectful.FileSystem (FileSystem)
+import qualified Effectful.FileSystem.IO as Eff
 import Effectful.Log
+import Effectful.Time (Clock)
+import qualified Effectful.Time as Time
 import GHC.IO.Device (isTerminal)
 import GHC.IO.Handle.FD (handleToFd)
 import Path.Tagged (File, PathTo, toFilePath)
 import System.Exit (exitFailure)
 import System.IO (BufferMode (..), Handle, IOMode (AppendMode), hClose, hSetBuffering, openFile, stderr)
 import qualified Text.Builder as TBL
+import Unsafe.Coerce (unsafeCoerce)
+
+localLogger :: (Log :> es) => (Logger -> Logger) -> Eff es a -> Eff es a
+localLogger f = localStaticRep @Log $ unsafeCoerce modify
+  where
+    modify :: LoggerEnv -> LoggerEnv
+    modify le = le {leLogger = f (leLogger le)}
 
 runStdErrLogger ::
   (IOE :> es) =>
@@ -83,6 +99,16 @@ withFileLogger name fp act =
   bracket (liftIO $ openFile (toFilePath fp) AppendMode) (liftIO . hClose) $ \h ->
     withHandleLogger name h act
 
+withFileLoggerEff ::
+  (FileSystem :> es, Clock :> es) =>
+  Text ->
+  PathTo e r File ->
+  (Logger -> Eff es ()) ->
+  Eff es ()
+withFileLoggerEff name fp act =
+  bracket (Eff.openFile (toFilePath fp) AppendMode) Eff.hClose $ \h ->
+    withHandleLoggerEff name h act
+
 withHandleLogger ::
   (MonadMask m, MonadIO m) => Text -> Handle -> (Logger -> m a) -> m a
 withHandleLogger name h act = do
@@ -99,6 +125,22 @@ withHandleLogger name h act = do
             logAttention_ $
               "Exception: " <> T.pack (displayException exc)
         liftIO exitFailure
+
+withHandleLoggerEff ::
+  (Clock :> es, FileSystem :> es) => Text -> Handle -> (Logger -> Eff es ()) -> Eff es ()
+withHandleLoggerEff name h act = do
+  term <- unsafeEff_ $ isTerminal =<< handleToFd h
+  Eff.hSetBuffering h LineBuffering
+  zone <- Time.getCurrentTimeZone
+  bracket
+    (unsafeEff_ $ mkLogger "handle" (T.hPutStrLn h . renderLogMessage term zone Nothing))
+    (\l -> unsafeEff_ $ waitForLogger l >> shutdownLogger l)
+    $ \logger ->
+      act logger `catchAny` \(SomeException exc) -> do
+        unsafeEff_ $
+          runLogT name logger LogTrace $
+            logAttention_ $
+              "Exception: " <> T.pack (displayException exc)
 
 withStderrLogger :: (MonadMask m, MonadIO m) => Text -> (Logger -> m a) -> m a
 withStderrLogger name act = do
