@@ -29,7 +29,6 @@ module Effectful.Network.GitHub.Apps (
   -- ** GitHub Repository Context
   GitHubRepo,
   getCurrentRepo,
-  askCurrentRepoToken,
   Repository (..),
   parseRepo,
   withGitHubRepo,
@@ -78,6 +77,8 @@ module Effectful.Network.GitHub.Apps (
   APITokenConfig (..),
   GitHubAppToken (..),
   GitHubRepoTokens (..),
+  askCurrentRepoToken,
+  fromToken,
   newTimedAppToken,
   newTimedRepoTokens,
   newAPITokens,
@@ -101,6 +102,7 @@ import Control.Monad (guard)
 import Data.Aeson (FromJSON, ToJSON, (.=))
 import Data.Aeson qualified as J
 import Data.Binary (Binary)
+import Data.ByteString qualified as BS
 import Data.ByteString.Base64.Lazy qualified as B64
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char qualified as C
@@ -788,3 +790,7 @@ getCommitObj ref =
   -- NOTE: コミットの情報を取得するときは @git/@ はつけない。
   fmap responseBody . callEndpointJSON
     =<< parseRawRepoAPIRequest ("commits/" <> T.unpack ref.hash)
+
+fromToken :: Token -> BS.ByteString
+fromToken (AccessToken t) = t
+fromToken (BearerToken t) = t
