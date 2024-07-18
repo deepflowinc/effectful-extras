@@ -14,6 +14,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoFieldSelectors #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Effectful.Network.GitHub.Apps (
   -- * API Calls
@@ -27,9 +28,12 @@ module Effectful.Network.GitHub.Apps (
 
   -- ** GitHub Repository Context
   GitHubRepo,
+  getCurrentRepo,
   Repository (..),
   parseRepo,
   withGitHubRepo,
+  EncodeSigner,
+  loadSigner,
 
   -- ** High-level bindings
   getRawContent,
@@ -73,11 +77,14 @@ module Effectful.Network.GitHub.Apps (
   APITokenConfig (..),
   GitHubAppToken (..),
   GitHubRepoTokens (..),
+  askCurrentRepoToken,
+  fromToken,
   newTimedAppToken,
   newTimedRepoTokens,
   newAPITokens,
   askRepoSetting,
   askRepoToken,
+  hasRepo,
 
   -- * Re-exports
   GHEndpoint (..),
@@ -94,6 +101,8 @@ import Control.Exception.Safe (throwM)
 import Control.Monad (guard)
 import Data.Aeson (FromJSON, ToJSON, (.=))
 import Data.Aeson qualified as J
+import Data.Binary (Binary)
+import Data.ByteString qualified as BS
 import Data.ByteString.Base64.Lazy qualified as B64
 import Data.ByteString.Lazy qualified as LBS
 import Data.Char qualified as C
@@ -126,6 +135,7 @@ import GHC.Generics (Generic)
 import GHC.OldList qualified as L
 import GitHub.REST (GHEndpoint (..), GitHubSettings (..), GitHubT, KeyValue (..), StdMethod (..), Token (..), queryGitHub, queryGitHubAll, queryGitHub_, runGitHubT)
 import GitHub.REST.Auth (getJWTToken)
+import GitHub.REST.Auth qualified as Orig
 import Network.HTTP.Client (responseTimeoutNone)
 import Path.Tagged
 import Path.Tagged.IO (makeRelative)
@@ -135,7 +145,7 @@ type instance DispatchOf GitHub = 'Dynamic
 
 newtype CommitHash = CommitHash {hash :: Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (IsString, ToJSON, FromJSON, NFData, Hashable)
+  deriving newtype (IsString, ToJSON, FromJSON, NFData, Hashable, Binary)
 
 parseRepo :: String -> Maybe Repository
 parseRepo str = do
@@ -145,7 +155,7 @@ parseRepo str = do
 
 data Repository = Repository {owner, name :: !T.Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (Hashable, NFData)
+  deriving anyclass (Hashable, NFData, Binary)
 
 instance ToJSON Repository where
   toJSON Repository {..} = J.toJSON $ owner <> "/" <> name
@@ -158,6 +168,7 @@ instance FromJSON Repository where
 
 data GitHub :: Effect where
   HasRepo :: Repository -> GitHub m Bool
+  AskTimedToken :: Repository -> GitHub m (Maybe (TimedResource Token))
   LiftGitHubT :: Repository -> GitHubT IO a -> GitHub m a
   MkRawHttpReq :: Repository -> String -> GitHub m Request
   CallEndpointJSON :: (FromJSON a) => Request -> GitHub m (Response a)
@@ -167,10 +178,16 @@ data GitHubRepo :: Effect
 
 type instance DispatchOf GitHubRepo = 'Static 'NoSideEffects
 
-newtype instance StaticRep GitHubRepo = GHRepo Repository
+data instance StaticRep GitHubRepo = GHRepo !Repository !(TimedResource Token)
+
+loadSigner :: (FileSystem :> es) => FilePath -> Eff es EncodeSigner
+loadSigner = unsafeEff_ . Orig.loadSigner
 
 hasRepo :: (GitHub :> es) => Repository -> Eff es Bool
 hasRepo = send . HasRepo
+
+askRepoTimedToken :: (GitHub :> es) => Repository -> Eff es (Maybe (TimedResource Token))
+askRepoTimedToken = send . AskTimedToken
 
 callEndpointJSON ::
   (HasCallStack, FromJSON a, GitHub :> es) =>
@@ -199,7 +216,7 @@ runGitHubWith_ cfg act = do
 
 newtype GitHubException = UnknownRepo Repository
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (Exception)
+  deriving anyclass (Exception, NFData, Hashable, Binary)
 
 runGitHubWith ::
   ( Http :> es
@@ -211,6 +228,7 @@ runGitHubWith ::
 runGitHubWith tok = do
   interpret $ \_env -> \case
     HasRepo repo -> isJust <$> askRepoToken repo tok
+    AskTimedToken repo -> pure $ HM.lookup repo tok.repos.repoTokens
     LiftGitHubT repo act -> do
       gh <-
         maybe (throwM $ UnknownRepo repo) pure
@@ -229,7 +247,7 @@ parseRawRepoAPIRequest ::
   String ->
   Eff es Request
 parseRawRepoAPIRequest endpoint = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   let req =
         "/repos/"
           <> T.unpack repo.owner
@@ -257,6 +275,12 @@ rawHttpReqImpl cfg btok endpoint = do
           }
   pure req
 
+getCurrentRepo :: (GitHubRepo :> es) => Eff es Repository
+getCurrentRepo = getStaticRep <&> \(GHRepo repo _) -> repo
+
+askCurrentRepoToken :: (Expiration :> es, GitHubRepo :> es) => Eff es Token
+askCurrentRepoToken = getStaticRep >>= \(GHRepo _ tok) -> readResource tok
+
 getRawContent ::
   ( GitHub :> es
   , HasCallStack
@@ -273,7 +297,7 @@ getRawContent commit fp = do
 
 data Target = Target {label :: !Text, ref :: !Text, sha :: !CommitHash}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data Pull = Pull
   { url :: String
@@ -286,7 +310,7 @@ data Pull = Pull
   , base :: Target
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 getPull ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
@@ -307,20 +331,20 @@ callGitHubAPI ::
   GitHubT IO a ->
   Eff es a
 callGitHubAPI act = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   send $ LiftGitHubT repo act
 
 withGitHubRepo ::
   (GitHub :> es) => Repository -> Eff (GitHubRepo ': es) a -> Eff es a
 withGitHubRepo repo act = do
-  has <- hasRepo repo
-  if has
-    then evalStaticRep (GHRepo repo) act
-    else throwM $ UnknownRepo repo
+  mtok <- askRepoTimedToken repo
+  case mtok of
+    Just tok -> evalStaticRep (GHRepo repo tok) act
+    Nothing -> throwM $ UnknownRepo repo
 
 data BlobResult = BlobResult {url :: Text, sha :: Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 parseRawAPIRequest ::
   (HasCallStack, GitHub :> es, GitHubRepo :> es) =>
@@ -328,7 +352,7 @@ parseRawAPIRequest ::
   Eff es Request
 {-# INLINE parseRawAPIRequest #-}
 parseRawAPIRequest uri = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   send $ MkRawHttpReq repo uri
 
 createBlob ::
@@ -369,13 +393,15 @@ data TreeEntry = TreeEntry
   , sha :: SHA
   }
   deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable, Binary)
 
 newtype GitEntryMode = GitEntryMode {getPermission :: Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving newtype (IsString, FromJSON, ToJSON, Hashable, NFData)
+  deriving newtype (IsString, FromJSON, ToJSON, Hashable, NFData, Binary)
 
 data TreeEntryType = Blob | Tree
   deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable, Binary)
 
 modeForEntry :: TreeEntryType -> GitEntryMode
 modeForEntry Blob = "100644"
@@ -409,11 +435,11 @@ instance ToJSON TreeEntry where
 
 data TreeResult = TreeResult {url :: Text, sha :: SHA}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data GitTree = GitTree {tree :: [TreeEntry], base_tree :: Maybe SHA}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, NFData, Hashable, Binary)
 
 createTree ::
   ( GitHub :> es
@@ -524,14 +550,14 @@ data RefsResult = RefsResult
   , object :: GitObject
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data GitObject = GitObject
   { url :: Text
   , sha :: CommitHash
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 getGitRef ::
   ( GitHub :> es
@@ -546,6 +572,7 @@ getGitRef ref =
 
 data CommitObj = CommitObj {sha :: CommitHash, tree :: CommitTree}
   deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, Hashable, Binary)
 
 instance FromJSON CommitObj where
   parseJSON = J.withObject "commit object" \dic -> do
@@ -555,11 +582,11 @@ instance FromJSON CommitObj where
 
 data CommitTree = CommitTree {sha :: SHA, url :: String}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 data NewCommit = NewCommit {message :: Text, tree :: SHA, parents :: [CommitHash]}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, NFData, Hashable, Binary)
 
 createCommit ::
   ( GitHub :> es
@@ -654,11 +681,11 @@ newTimedAppToken cfg = do
 
 data Installation = Installation {id, target_id :: !Int, account :: !InstallationAccount}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (J.FromJSON, J.ToJSON)
+  deriving anyclass (J.FromJSON, J.ToJSON, NFData, Hashable, Binary)
 
 newtype InstallationAccount = InstAccount {login :: T.Text}
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (J.FromJSON, J.ToJSON)
+  deriving anyclass (J.FromJSON, J.ToJSON, NFData, Hashable, Binary)
 
 data AccessTokenResult = AccessTokenResult
   { expires_at :: ZonedTime
@@ -716,7 +743,7 @@ data GitHubConfig = GitHubConfig
 newtype AppID = AppID {getAppID :: Int}
   deriving (Eq, Ord, Generic)
   deriving newtype (Show, FromJSON, ToJSON)
-  deriving newtype (Num, Real, Enum, Integral)
+  deriving newtype (Num, Real, Enum, Integral, NFData, Hashable, Binary)
 
 commentIssue ::
   ( GitHub :> es
@@ -727,7 +754,7 @@ commentIssue ::
   Text ->
   Eff es ()
 commentIssue issue text = do
-  GHRepo repo <- getStaticRep
+  GHRepo repo _ <- getStaticRep
   callGitHubAPI $
     queryGitHub_
       GHEndpoint
@@ -763,3 +790,7 @@ getCommitObj ref =
   -- NOTE: コミットの情報を取得するときは @git/@ はつけない。
   fmap responseBody . callEndpointJSON
     =<< parseRawRepoAPIRequest ("commits/" <> T.unpack ref.hash)
+
+fromToken :: Token -> BS.ByteString
+fromToken (AccessToken t) = t
+fromToken (BearerToken t) = t
