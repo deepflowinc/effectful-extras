@@ -28,7 +28,7 @@ workspace
 ### https://raw.github.com/github/gitignore/14f8a8b4c51ecc00b18905a95c117954e6c77b9d/Global/VisualStudioCode.gitignore
 
 .vscode/*
-!.vscode/settings.json
+!.vscode/*.shared.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
@@ -116,11 +116,6 @@ cabal.project.local~
 
 ### https://raw.github.com/github/gitignore/e5323759e387ba347a9d50f8b0ddd16502eb71d4/Global/VisualStudioCode.gitignore
 
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
 !.vscode/*.code-snippets
 
 # Local History for Visual Studio Code
