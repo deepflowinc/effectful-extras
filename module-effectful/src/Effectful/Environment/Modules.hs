@@ -27,6 +27,7 @@ import Control.Lens.Extras
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as J
 import Data.Aeson.Types (ToJSON (..), parseJSON)
+import Data.Binary (Binary)
 import qualified Data.CaseInsensitive as CI
 import Data.Generics.Labels ()
 import Data.HashMap.Strict (HashMap)
@@ -50,7 +51,7 @@ import qualified Text.BashScript as Shell
 
 data ModuleBackend = EnvironmentModule | LMod | Command T.Text
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData, Hashable)
+  deriving anyclass (NFData, Hashable, Binary)
 
 instance ToJSON ModuleBackend where
   toJSON EnvironmentModule = "module"

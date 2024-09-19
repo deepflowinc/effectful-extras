@@ -45,6 +45,7 @@ library
       aeson
     , base >=4.7 && <5
     , bash-script
+    , binary
     , case-insensitive
     , deepseq
     , effectful

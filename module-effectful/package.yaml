@@ -46,6 +46,7 @@ library:
   dependencies:
   - aeson
   - bash-script
+  - binary
   - case-insensitive
   - deepseq
   - effectful
