@@ -3126,4 +3126,4 @@ constraints: abstract-deque ==0.3,
              zot ==0.0.3,
              zstd ==0.1.3.0
 
-allow-newer: parsec:base
+allow-newer: parsec:*
