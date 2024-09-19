@@ -10,3 +10,8 @@ source-repository-package
     streaming-http
     streaming-s3
     streaming-SHA
+
+source-repository-package
+  type: git
+  location: https://github.com/deepflowinc/hs-bash-script.git
+  tag: 0229661d502ed773f9177acfafb5cd832e437ceb
