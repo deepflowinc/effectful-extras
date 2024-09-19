@@ -5,6 +5,7 @@
 -- Please place this file next to your .cabal file as cabal.config
 -- To only use tested packages, uncomment the following line:
 -- remote-repo: stackage-lts-22.34:http://www.stackage.org/lts-22.34
+import: ../../cabal.project
 with-compiler: ghc-9.6.6
 constraints: abstract-deque ==0.3,
              abstract-deque-tests ==0.3,
