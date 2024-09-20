@@ -86,7 +86,7 @@ data ModuleConfig = ModuleConfig
   , load :: ![String]
   }
   deriving (Show, Eq, Ord, Generic)
-  deriving anyclass (NFData, Hashable, ToJSON, FromJSON)
+  deriving anyclass (NFData, Hashable, ToJSON, FromJSON, Binary)
 
 getCommand :: ModuleBackend -> T.Text
 getCommand EnvironmentModule = "modulecmd bash load"
