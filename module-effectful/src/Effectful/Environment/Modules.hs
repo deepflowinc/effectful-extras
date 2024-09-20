@@ -105,8 +105,7 @@ withModuleEnvs cfg act = do
   bracket_ (imapM_ setEnv envs) (mapM_ (uncurry setEnv) env0) act
 
 parseModuleEnvVars ::
-  ( TypedProcess :> es
-  ) =>
+  (TypedProcess :> es) =>
   ModuleConfig ->
   Eff es (Either ModuleCmdException (HashMap String String))
 parseModuleEnvVars modules
