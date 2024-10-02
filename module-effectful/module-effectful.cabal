@@ -1,0 +1,75 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           module-effectful
+version:        0.1.0.0
+synopsis:       A tiny layer for effectful to interact with environmental modules.
+description:    Please see the README on GitHub at <https://github.com/deepflowinc/module-effectful#readme>
+category:       Control, System, Shell
+homepage:       https://github.com/deepflowinc/effectful-extras#readme
+bug-reports:    https://github.com/deepflowinc/effectful-extras/issues
+author:         DeepFlow, Inc.
+maintainer:     DeepFlow, Inc.
+copyright:      2024 (c) DeepFlow, Inc.
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+tested-with:
+    GHC == 9.2.8
+  , GHC == 9.4.8
+  , GHC == 9.6.4
+  , GHC == 9.8.1
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/deepflowinc/effectful-extras
+  subdir: module-effectful
+
+library
+  exposed-modules:
+      Effectful.Environment.Modules
+  other-modules:
+      Paths_module_effectful
+  autogen-modules:
+      Paths_module_effectful
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-packages
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bash-script
+    , binary
+    , case-insensitive
+    , deepseq
+    , effectful
+    , generic-lens
+    , hashable
+    , language-bash
+    , lens
+    , safe-exceptions
+    , text
+    , typed-process-effectful
+    , unordered-containers
+  default-language: Haskell2010
+
+test-suite module-effectful-test
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  other-modules:
+      Paths_module_effectful
+  autogen-modules:
+      Paths_module_effectful
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -Wunused-packages -threaded -O2 -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , module-effectful
+  default-language: Haskell2010

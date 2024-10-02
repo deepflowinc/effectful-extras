@@ -641,8 +641,7 @@ newAPITokens config = do
   pure APITokens {..}
 
 askRepoSetting ::
-  ( Expiration :> es
-  ) =>
+  (Expiration :> es) =>
   APITokenConfig ->
   APITokens ->
   Repository ->
@@ -697,8 +696,7 @@ data AccessTokenResult = AccessTokenResult
   deriving anyclass (J.FromJSON, J.ToJSON)
 
 newTimedRepoTokens ::
-  ( Expiration :> es
-  ) =>
+  (Expiration :> es) =>
   APITokenConfig ->
   Eff es GitHubRepoTokens
 newTimedRepoTokens cfg = do

@@ -1,0 +1,72 @@
+name:                module-effectful
+version:             0.1.0.0
+github:              "deepflowinc/effectful-extras/module-effectful"
+license:             BSD-3-Clause
+author:              "DeepFlow, Inc."
+maintainer:          "DeepFlow, Inc."
+copyright:           "2024 (c) DeepFlow, Inc."
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+tested-with:
+- GHC == 9.2.8
+- GHC == 9.4.8
+- GHC == 9.6.4
+- GHC == 9.8.1
+
+
+# Metadata used when publishing your package
+synopsis:            A tiny layer for effectful to interact with environmental modules.
+category:            Control, System, Shell
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/deepflowinc/module-effectful#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+ghc-options:
+- -Wall
+- -Wcompat
+- -Widentities
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-export-lists
+- -Wmissing-home-modules
+- -Wpartial-fields
+- -Wredundant-constraints
+- -Wunused-packages
+
+library:
+  source-dirs: src
+  dependencies:
+  - aeson
+  - bash-script
+  - binary
+  - case-insensitive
+  - deepseq
+  - effectful
+  - generic-lens
+  - hashable
+  - language-bash
+  - lens
+  - safe-exceptions
+  - text
+  - typed-process-effectful
+  - unordered-containers
+
+tests:
+  module-effectful-test:
+    source-dirs: test
+    main: Test.hs
+    ghc-options:
+    - -threaded
+    - -O2
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - module-effectful
